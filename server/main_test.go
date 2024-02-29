@@ -95,7 +95,7 @@ func TestHandleHello(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			server := httptest.NewServer(handleHello(h))
+			server := httptest.NewServer(handleAppQuery(h))
 			t.Cleanup(func() { server.Close() })
 
 			req, err := http.NewRequestWithContext(ctx, "GET", server.URL, nil)
