@@ -36,11 +36,11 @@ const defaultPort = "8080"
 
 var port = flag.String("port", defaultPort, "Specifies server port to listen on.")
 
-func handleHello(h *renderer.Renderer) http.Handler {
+func handleAppQuery(h *renderer.Renderer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := logging.FromContext(r.Context())
 		logger.InfoContext(r.Context(), "handling request")
-		h.RenderJSON(w, http.StatusOK, map[string]string{"message": "hello world"})
+		h.RenderJSON(w, http.StatusOK, map[string]string{"target": "page2"})
 	})
 }
 
@@ -59,7 +59,7 @@ func realMain(ctx context.Context) error {
 	}
 
 	r := chi.NewRouter()
-	r.Mount("/", handleHello(h))
+	r.Mount("/", handleAppQuery(h))
 	walkFunc := func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
 		logger.DebugContext(ctx, "Route registered", "http_method", method, "route", route)
 		return nil
