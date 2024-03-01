@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const MyApp());
@@ -54,18 +57,49 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+Future<String> fetchUserData() async {
+  final response = await http.get(
+      Uri.parse('https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app/'));
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  if (response.statusCode == 200) {
+    var data = json.decode(response.body);
+    return data['target'];
+  } else {
+    throw Exception('Failed to get page info');
+  }
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  @override
+  void initState() {
+    super.initState();
+    _navigateBasedOnPageInfo();
+  }
+
+  Future<void> _navigateBasedOnPageInfo() async {
+    try {
+      final pageInfo = await fetchUserData();
+      if (pageInfo == 'page1') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const FirstPage()),
+          );
+        });
+      } else if(pageInfo == 'page2') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SecondPage()),
+          );
+        });
+      }
+
+      // Similarly, you can add more conditions for other pages
+    } catch (error) {
+      // Error handling
+      print('Failed to navigate based on page info: $error');
+    }
   }
 
   @override
