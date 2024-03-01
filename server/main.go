@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -24,7 +25,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"database/sql"
 	"syscall"
 	"time"
 
@@ -36,13 +36,13 @@ import (
 )
 
 const (
-	defaultPort = "8080"
+	defaultPort           = "8080"
 	deferredDeeplinkTable = "DeferredDeepLinks"
 )
 
 var (
 	port = flag.String("port", defaultPort, "Specifies server port to listen on.")
-	db *sql.DB
+	db   *sql.DB
 )
 
 type AppQueryRequest struct {
@@ -82,6 +82,11 @@ func realMain(ctx context.Context) error {
 		log.Fatalf("Could not connect to database: %v", err)
 	}
 	defer db.Close()
+
+	go func() {
+		logger.InfoContext(ctx, "starting frontend on port 8081")
+		setupFrontend(ctx, "8081")
+	}()
 
 	// Make a new renderer for rendering json.
 	// Don't provide filesystem as we don't have templates to render.

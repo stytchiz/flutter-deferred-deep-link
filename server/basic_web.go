@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -33,7 +34,7 @@ func getClientIPFromHttpHeaders(header http.Header) (string, error) {
 	}
 	ips := strings.Split(xForwardedFor, ", ")
 	if ips[0] == "" {
-		return "", fmt.Errorf("client ip is empty", )
+		return "", fmt.Errorf("client ip is empty")
 	}
 	return ips[0], nil
 }
@@ -63,7 +64,7 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	fmt.Fprintln(w, "Got response: " + string(body))
+	fmt.Fprintln(w, "Got response: "+string(body))
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -79,9 +80,8 @@ func renderTemplate(w http.ResponseWriter, tmpl string) {
 	}
 }
 
-func main() {
+func setupFrontend(ctx context.Context, port string) {
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/save", saveHandler)
-
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
