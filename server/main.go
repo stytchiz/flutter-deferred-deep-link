@@ -17,12 +17,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"database/sql"
 	"syscall"
 	"time"
 
@@ -33,15 +35,38 @@ import (
 	"github.com/abcxyz/pkg/serving"
 )
 
-const defaultPort = "8080"
+const (
+	defaultPort = "8080"
+	deferredDeeplinkTable = "DeferredDeepLinks"
+)
 
-var port = flag.String("port", defaultPort, "Specifies server port to listen on.")
+var (
+	port = flag.String("port", defaultPort, "Specifies server port to listen on.")
+	db *sql.DB
+)
+
+type AppQueryRequest struct {
+	DeviceID string `json:"device_id"`
+	Pill     string `json:"pill"`
+}
 
 func handleAppQuery(h *renderer.Renderer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := logging.FromContext(r.Context())
 		logger.InfoContext(r.Context(), "handling request")
-		h.RenderJSON(w, http.StatusOK, map[string]string{"target": "page2"})
+		decoder := json.NewDecoder(r.Body)
+		var req AppQueryRequest
+		if err := decoder.Decode(&req); err != nil {
+			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to unmarshal request: %v", err))
+			return
+		}
+
+		if err := InsertRow(db, deferredDeeplinkTable, []string{req.DeviceID, req.Pill}); err != nil {
+			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to write to database: %v", err))
+			return
+		}
+
+		h.RenderJSON(w, http.StatusOK, nil)
 	})
 }
 
@@ -51,7 +76,8 @@ func realMain(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
 
 	// Connect to CloudSQL
-	db, err := connectWithConnector()
+	var err error
+	db, err = connectWithConnector()
 	if err != nil {
 		log.Fatalf("Could not connect to database: %v", err)
 	}

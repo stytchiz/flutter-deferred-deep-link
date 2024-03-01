@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"context"
 	"database/sql"
 	"fmt"
@@ -10,6 +11,10 @@ import (
 
 	"cloud.google.com/go/cloudsqlconn"
 	"github.com/go-sql-driver/mysql"
+)
+
+const (
+	insertQueryAllColumns = "INSERT INTO %s VALUES (%s)"
 )
 
 func connectWithConnector() (*sql.DB, error) {
@@ -46,4 +51,12 @@ func connectWithConnector() (*sql.DB, error) {
 		return nil, fmt.Errorf("sql.Open: %w", err)
 	}
 	return dbPool, nil
+}
+
+func InsertRow(db *sql.DB, table string, values []string) error {
+	queryStr := fmt.Sprintf(insertQueryAllColumns, table, strings.Join(values, ", "))
+	if _, err := db.Exec(queryStr); err != nil {
+        return fmt.Errorf("db.Exec failed: %v", err)
+    }
+	return nil
 }
