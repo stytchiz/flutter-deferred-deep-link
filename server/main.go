@@ -19,6 +19,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -48,6 +49,14 @@ func handleAppQuery(h *renderer.Renderer) http.Handler {
 // This server supports graceful stopping and cancellation.
 func realMain(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
+
+	// Connect to CloudSQL
+	db, err := connectWithConnector()
+	if err != nil {
+		log.Fatalf("Could not connect to database: %v", err)
+	}
+	defer db.Close()
+
 	// Make a new renderer for rendering json.
 	// Don't provide filesystem as we don't have templates to render.
 	h, err := renderer.New(ctx, nil,
