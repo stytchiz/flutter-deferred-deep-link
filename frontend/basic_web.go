@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -24,26 +25,45 @@ type ServiceRequest struct {
 
 type ServiceResponse struct{}
 
+func getClientIPFromHttpHeaders(header http.Header) (string, error) {
+	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For#syntax
+	xForwardedFor := header.Get("X-Forwarded-For")
+	if xForwardedFor == "" {
+		return "", fmt.Errorf("X-Forwarded-For header is empty")
+	}
+	ips := strings.Split(xForwardedFor, ", ")
+	if ips[0] == "" {
+		return "", fmt.Errorf("client ip is empty", )
+	}
+	return ips[0], nil
+}
+
 func saveHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Get Device info from headers.
-	// https://stackoverflow.com/questions/27234861/correct-way-of-getting-clients-ip-addresses-from-http-request
+	clientIP, err := getClientIPFromHttpHeaders(r.Header)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 
 	pill := r.URL.Query().Get("pill") // red or blue
-	req := &ServiceRequest{Pill: pill, DeviceID: "foo-bar"}
+
+	req := &ServiceRequest{Pill: pill, DeviceID: clientIP}
 	data, err := json.Marshal(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+
 	resp, err := http.Post(ServiceAddr, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	defer resp.Body.Close()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	fmt.Fprintln(w, string(body))
+
+	fmt.Fprintln(w, "Got response: " + string(body))
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
