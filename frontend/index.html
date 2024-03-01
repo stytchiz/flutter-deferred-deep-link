@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        .button {
+            background-color: #04AA6D;
+            /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 20px 20px;
+            cursor: pointer;
+        }
+
+        .button2 {
+            background-color: #008CBA;
+        }
+
+        /* Blue */
+        .button3 {
+            background-color: #f44336;
+        }
+
+        /* Red */
+    </style>
+</head>
+
+<body>
+
+    <h2>Red pill or blue pill?</h2>
+
+    <button id="redButton" class="button button3">Red</button>
+
+    <button id="blueButton" class="button button2">Blue</button>
+
+    <script>
+        document.getElementById("redButton").addEventListener("click", function () {
+            fetch('/save?pill=red', { method: 'POST' })
+                .then(response => response.text())
+                .then(data => alert(data))
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
+
+    <script>
+        document.getElementById("blueButton").addEventListener("click", function () {
+            fetch('/save?pill=blue', { method: 'POST' })
+                .then(response => response.text())
+                .then(data => alert(data))
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
+
+</body>
+
+</html>
