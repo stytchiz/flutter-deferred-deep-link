@@ -3,19 +3,18 @@ module github.com/abcxyz/abc/t/rest_server
 go 1.21
 
 require (
+	cloud.google.com/go/cloudsqlconn v1.7.0
 	github.com/abcxyz/pkg v0.7.1
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/google/go-cmp v0.6.0
+	github.com/go-sql-driver/mysql v1.7.1
 )
 
 require (
-	cloud.google.com/go/cloudsqlconn v1.7.0 // indirect
 	cloud.google.com/go/compute v1.23.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
