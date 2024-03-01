@@ -9,8 +9,7 @@ RUN go build \
   -a \
   -trimpath \
   -ldflags "-s -w -extldflags='-static'" \
-  -o server \
-  ./main.go
+  -o server .
 
 EXPOSE 8080
 
