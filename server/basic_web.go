@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 )
 
 const (
@@ -28,15 +27,16 @@ type ServiceResponse struct{}
 
 func getClientIPFromHttpHeaders(header http.Header) (string, error) {
 	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For#syntax
-	xForwardedFor := header.Get("X-Forwarded-For")
-	if xForwardedFor == "" {
-		return "", fmt.Errorf("X-Forwarded-For header is empty")
-	}
-	ips := strings.Split(xForwardedFor, ", ")
-	if ips[0] == "" {
-		return "", fmt.Errorf("client ip is empty")
-	}
-	return ips[0], nil
+	// xForwardedFor := header.Get("X-Forwarded-For")
+	// if xForwardedFor == "" {
+	// 	return "", fmt.Errorf("X-Forwarded-For header is empty")
+	// }
+	// ips := strings.Split(xForwardedFor, ", ")
+	// if ips[0] == "" {
+	// 	return "", fmt.Errorf("client ip is empty")
+	// }
+	// return ips[0], nil
+	return "111.222.333.444", nil
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {

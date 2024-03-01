@@ -83,10 +83,9 @@ func realMain(ctx context.Context) error {
 	}
 	defer db.Close()
 
-	go func() {
-		logger.InfoContext(ctx, "starting frontend on port 8081")
-		setupFrontend(ctx, "8081")
-	}()
+	// See https://github.com/go-sql-driver/mysql/issues/257#issuecomment-53886663.
+	db.SetMaxIdleConns(0)
+	db.SetMaxOpenConns(500)
 
 	// Make a new renderer for rendering json.
 	// Don't provide filesystem as we don't have templates to render.
