@@ -11,6 +11,6 @@ RUN go build \
   -ldflags "-s -w -extldflags='-static'" \
   -o server .
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 CMD ["/app/server"]
