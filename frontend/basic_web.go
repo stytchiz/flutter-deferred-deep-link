@@ -25,6 +25,9 @@ type ServiceRequest struct {
 type ServiceResponse struct{}
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Get Device info from headers.
+	// https://stackoverflow.com/questions/27234861/correct-way-of-getting-clients-ip-addresses-from-http-request
+
 	pill := r.URL.Query().Get("pill") // red or blue
 	req := &ServiceRequest{Pill: pill, DeviceID: "foo-bar"}
 	data, err := json.Marshal(req)
