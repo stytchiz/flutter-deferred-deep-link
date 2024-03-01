@@ -1,20 +1,27 @@
 package main
 
 import (
-	"strings"
 	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"strings"
 
 	"cloud.google.com/go/cloudsqlconn"
 	"github.com/go-sql-driver/mysql"
 )
 
 const (
-	insertQueryAllColumns = "INSERT INTO %s VALUES (%s)"
+	insertQueryAllColumns = `
+CREATE TEMPORARY TABLE IF NOT EXISTS %s (
+	DEVICE_IP VARCHAR(100), 
+	PILL VARCHAR(20),
+	PRIMARY KEY (DEVICE_IP)
+);
+INSERT INTO %s VALUES (%s);
+`
 )
 
 func connectWithConnector() (*sql.DB, error) {
@@ -54,9 +61,9 @@ func connectWithConnector() (*sql.DB, error) {
 }
 
 func InsertRow(db *sql.DB, table string, values []string) error {
-	queryStr := fmt.Sprintf(insertQueryAllColumns, table, strings.Join(values, ", "))
+	queryStr := fmt.Sprintf(insertQueryAllColumns, table, table, strings.Join(values, ", "))
 	if _, err := db.Exec(queryStr); err != nil {
-        return fmt.Errorf("db.Exec failed: %v", err)
-    }
+		return fmt.Errorf("db.Exec failed: %v", err)
+	}
 	return nil
 }
