@@ -1,6 +1,6 @@
 module github.com/abcxyz/abc/t/rest_server
 
-go 1.22
+go 1.21
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.7.0
