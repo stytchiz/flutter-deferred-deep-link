@@ -148,6 +148,7 @@ func realMain(ctx context.Context) error {
 	db.SetMaxIdleConns(0)
 	db.SetMaxOpenConns(500)
 	db.SetConnMaxLifetime(time.Minute)
+	logger.InfoContext(ctx, "starting database server connection")
 
 	// Make a new renderer for rendering json.
 	// Don't provide filesystem as we don't have templates to render.

@@ -1,4 +1,4 @@
-FROM golang:1.21 as backend-builder
+FROM golang:1.22 as backend-builder
 
 WORKDIR /app
 ENV CGO_ENABLED=0
@@ -11,6 +11,6 @@ RUN go build \
   -ldflags "-s -w -extldflags='-static'" \
   -o server .
 
-EXPOSE 8080 8081
+EXPOSE 8080
 
 CMD ["/app/server"]
