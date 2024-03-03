@@ -16,12 +16,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
+	"html/template"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,32 +37,75 @@ import (
 )
 
 const (
+	ServiceAddr           = "https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app"
+	DeferServicePath      = "/defer"
 	defaultPort           = "8080"
 	deferredDeeplinkTable = "DeferredDeepLinks"
 )
 
 var (
 	port = flag.String("port", defaultPort, "Specifies server port to listen on.")
-	db   *sql.DB
+
+	db        *sql.DB
+	templates = template.Must(template.ParseFiles("index.html"))
 )
 
-type AppQueryRequest struct {
+// empty
+type TemplateParams struct{}
+
+type DeferQueryRequest struct {
 	DeviceID string `json:"device_id"`
 	Pill     string `json:"pill"`
+}
+
+func getClientIPFromHttpHeaders(_ http.Header) (string, error) {
+	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For#syntax
+	// xForwardedFor := header.Get("X-Forwarded-For")
+	// if xForwardedFor == "" {
+	// 	return "", fmt.Errorf("X-Forwarded-For header is empty")
+	// }
+	// ips := strings.Split(xForwardedFor, ", ")
+	// if ips[0] == "" {
+	// 	return "", fmt.Errorf("client ip is empty")
+	// }
+	// return ips[0], nil
+	return "111.222.333.444", nil
 }
 
 func handleAppQuery(h *renderer.Renderer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := logging.FromContext(r.Context())
-		logger.InfoContext(r.Context(), "handling request")
-		decoder := json.NewDecoder(r.Body)
-		var req AppQueryRequest
-		if err := decoder.Decode(&req); err != nil {
-			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to unmarshal request: %v", err))
+		logger.InfoContext(r.Context(), "handling app request...but app is not installed")
+
+		clientIP, err := getClientIPFromHttpHeaders(r.Header)
+		if err != nil {
+			h.RenderJSON(w, http.StatusBadRequest, fmt.Errorf("failed to read client headers: %v", err))
 			return
 		}
 
-		if err := InsertRow(db, deferredDeeplinkTable, []string{req.DeviceID, req.Pill}); err != nil {
+		pillID := chi.URLParam(r, "pill")
+		req := &DeferQueryRequest{Pill: pillID, DeviceID: clientIP}
+		reqB, _ := json.Marshal(&req)
+		if _, err := http.Post(ServiceAddr+DeferServicePath, "application/json", bytes.NewBuffer(reqB)); err != nil {
+			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to make request: %v", err))
+			return
+		}
+
+		h.RenderJSON(w, http.StatusOK, nil)
+	})
+}
+
+func handleDeferQuery(h *renderer.Renderer) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := logging.FromContext(r.Context())
+		logger.InfoContext(r.Context(), "handling defer request")
+		decoder := json.NewDecoder(r.Body)
+		var req DeferQueryRequest
+		if err := decoder.Decode(&req); err != nil {
+			h.RenderJSON(w, http.StatusBadRequest, fmt.Errorf("failed to unmarshal request: %v", err))
+			return
+		}
+		if err := updateDatabaseForDeferredLinks(db, deferredDeeplinkTable, &req); err != nil {
 			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to write to database: %v", err))
 			return
 		}
@@ -70,16 +114,33 @@ func handleAppQuery(h *renderer.Renderer) http.Handler {
 	})
 }
 
+func handleProceedQuery(h *renderer.Renderer) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.RenderJSON(w, http.StatusOK, nil)
+	})
+}
+
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	renderHTML(w, "index")
+}
+
+func renderHTML(w http.ResponseWriter, name string) {
+	err := templates.ExecuteTemplate(w, name+".html", &TemplateParams{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 // realMain creates an example backend HTTP server.
 // This server supports graceful stopping and cancellation.
 func realMain(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
 
-	// Connect to CloudSQL
+	// Connect to CloudSQL instance
 	var err error
 	db, err = connectWithConnector()
 	if err != nil {
-		log.Fatalf("Could not connect to database: %v", err)
+		return fmt.Errorf("could not connect to database: %v", err)
 	}
 	defer db.Close()
 
@@ -99,7 +160,10 @@ func realMain(ctx context.Context) error {
 	}
 
 	r := chi.NewRouter()
-	r.Mount("/", handleAppQuery(h))
+	r.Get("/", handleIndex)
+	r.Mount("/app", handleAppQuery(h))
+	r.Mount("/defer", handleDeferQuery(h))
+	r.Mount("/proceed", handleProceedQuery(h))
 	walkFunc := func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
 		logger.DebugContext(ctx, "Route registered", "http_method", method, "route", route)
 		return nil
@@ -137,8 +201,8 @@ func main() {
 	flag.Parse()
 	if err := realMain(logging.WithLogger(ctx, logger)); err != nil {
 		done()
-		logger.ErrorContext(ctx, err.Error())
+		logger.ErrorContext(ctx, "server shut down with error: "+err.Error())
 		os.Exit(1)
 	}
-	logger.InfoContext(ctx, "completed")
+	logger.InfoContext(ctx, "server has shut down successfully")
 }

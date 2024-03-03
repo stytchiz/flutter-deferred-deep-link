@@ -1,11 +1,11 @@
 module github.com/abcxyz/abc/t/rest_server
 
-go 1.21
+go 1.22
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.7.0
-	github.com/abcxyz/pkg v0.7.1
-	github.com/go-chi/chi/v5 v5.0.8
+	github.com/abcxyz/pkg v1.0.3
+	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-sql-driver/mysql v1.7.1
 )
 
@@ -35,6 +35,6 @@ require (
 	google.golang.org/api v0.164.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240213162025-012b6fc9bca9 // indirect
-	google.golang.org/grpc v1.61.0 // indirect
+	google.golang.org/grpc v1.61.1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 )

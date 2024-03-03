@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	insertQueryAllColumns = `
+	insertQuery = `
 CREATE TEMPORARY TABLE IF NOT EXISTS %s (
-	DEVICE_IP VARCHAR(100), 
-	PILL VARCHAR(20),
-	PRIMARY KEY (DEVICE_IP)
+	device_ip VARCHAR(100), 
+	pill VARCHAR(20),
+	PRIMARY KEY (device_ip)
 );
-INSERT INTO %s VALUES (%s);
+INSERT INTO %s VALUES (%s) ON DUPLICATE KEY UPDATE pill = %s;
 `
 )
 
@@ -60,10 +60,15 @@ func connectWithConnector() (*sql.DB, error) {
 	return dbPool, nil
 }
 
-func InsertRow(db *sql.DB, table string, values []string) error {
-	queryStr := fmt.Sprintf(insertQueryAllColumns, table, table, strings.Join(values, ", "))
+func updateDatabaseForDeferredLinks(db *sql.DB, table string, req *DeferQueryRequest) error {
+	queryStr := populateUpsertQueryForDeferredLinks(table, req)
 	if _, err := db.Exec(queryStr); err != nil {
 		return fmt.Errorf("db.Exec failed: %v", err)
 	}
 	return nil
+}
+
+func populateUpsertQueryForDeferredLinks(table string, req *DeferQueryRequest) string {
+	values := []string{req.DeviceID, req.Pill}
+	return fmt.Sprintf(insertQuery, table, table, strings.Join(values, ", "), req.Pill)
 }
