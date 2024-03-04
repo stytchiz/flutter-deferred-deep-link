@@ -40,7 +40,7 @@
 
     <script>
         document.getElementById("redButton").addEventListener("click", function () {
-            fetch('/app?target=red', { method: 'POST' })
+            fetch('/app/red', { method: 'POST' })
                 .then(response => response.text())
                 .then(data => alert(data))
                 .catch(error => console.error('Error:', error));
@@ -49,7 +49,7 @@
 
     <script>
         document.getElementById("blueButton").addEventListener("click", function () {
-            fetch('/app?target=blue', { method: 'POST' })
+            fetch('/app/blue', { method: 'POST' })
                 .then(response => response.text())
                 .then(data => alert(data))
                 .catch(error => console.error('Error:', error));

@@ -64,7 +64,8 @@ func getClientIPFromHttpHeaders(header http.Header) (string, error) {
 	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For#syntax
 	xForwardedFor := header.Get("X-Forwarded-For")
 	if xForwardedFor == "" {
-		return "", fmt.Errorf("X-Forwarded-For header is empty")
+		return "111.111.111.111", nil
+		// return "", fmt.Errorf("X-Forwarded-For header is empty")
 	}
 	ips := strings.Split(xForwardedFor, ", ")
 	if ips[0] == "" {
@@ -85,9 +86,9 @@ func handleAppQuery(h *renderer.Renderer) http.Handler {
 		}
 
 		target := chi.URLParam(r, "target")
-		req := &DeferredDeepLinkQueryRequest{Target: target, UserIP: clientIP, DeviceType: "Android"}
+		req := &DeferredDeepLinkQueryRequest{Target: target, UserIP: clientIP, DeviceType: "android"}
 		reqB, _ := json.Marshal(&req)
-		logger.InfoContext(r.Context(), "calling service to add new deferred deep link entry")
+		logger.InfoContext(r.Context(), "calling service to add new deferred deep link entry", "request", string(reqB))
 		resp, err := http.Post(*serverURL+"/deferDeepLink", "application/json", bytes.NewBuffer(reqB))
 		if err != nil {
 			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to make request: %v", err))
@@ -165,7 +166,7 @@ func realMain(ctx context.Context) error {
 
 	r := chi.NewRouter()
 	r.Get("/", handleIndex)
-	r.Mount("/app", handleAppQuery(h))
+	r.Mount("/app/{target}", handleAppQuery(h))
 	r.Mount("/deferDeepLink", handleNewDeferredDeepLink(h))
 	r.Mount("/queryDeferredDeepLinks", handleDeferredDeepLinkQuery(h))
 	walkFunc := func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
