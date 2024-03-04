@@ -23,9 +23,11 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,12 +39,13 @@ import (
 )
 
 const (
-	serverURL   = "https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app"
-	defaultPort = "8080"
+	defaultServerURL = "https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app"
+	defaultPort      = "8080"
 )
 
 var (
-	port = flag.String("port", defaultPort, "Specifies server port to listen on.")
+	port      = flag.String("port", defaultPort, "Specifies server port to listen on.")
+	serverURL = flag.String("service_url", defaultServerURL, "Specifies server address.")
 
 	db        *sql.DB
 	templates = template.Must(template.ParseFiles("index.html"))
@@ -51,23 +54,23 @@ var (
 // empty
 type TemplateParams struct{}
 
-type DeferredAppLinkQueryRequest struct {
-	DeviceID string `json:"device_id"`
-	Pill     string `json:"pill"`
+type DeferredDeepLinkQueryRequest struct {
+	UserIP     string `json:"user_ip"`
+	DeviceType string `json:"device_type"`
+	Target     string `json:"target"`
 }
 
-func getClientIPFromHttpHeaders(_ http.Header) (string, error) {
+func getClientIPFromHttpHeaders(header http.Header) (string, error) {
 	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For#syntax
-	// xForwardedFor := header.Get("X-Forwarded-For")
-	// if xForwardedFor == "" {
-	// 	return "", fmt.Errorf("X-Forwarded-For header is empty")
-	// }
-	// ips := strings.Split(xForwardedFor, ", ")
-	// if ips[0] == "" {
-	// 	return "", fmt.Errorf("client ip is empty")
-	// }
-	// return ips[0], nil
-	return "111.222.333.444", nil
+	xForwardedFor := header.Get("X-Forwarded-For")
+	if xForwardedFor == "" {
+		return "", fmt.Errorf("X-Forwarded-For header is empty")
+	}
+	ips := strings.Split(xForwardedFor, ", ")
+	if ips[0] == "" {
+		return "", fmt.Errorf("client ip is empty")
+	}
+	return ips[0], nil
 }
 
 func handleAppQuery(h *renderer.Renderer) http.Handler {
@@ -81,29 +84,39 @@ func handleAppQuery(h *renderer.Renderer) http.Handler {
 			return
 		}
 
-		pillID := chi.URLParam(r, "pill")
-		req := &DeferredAppLinkQueryRequest{Pill: pillID, DeviceID: clientIP}
+		target := chi.URLParam(r, "target")
+		req := &DeferredDeepLinkQueryRequest{Target: target, UserIP: clientIP, DeviceType: "Android"}
 		reqB, _ := json.Marshal(&req)
-		if _, err := http.Post(serverURL+"/defer", "application/json", bytes.NewBuffer(reqB)); err != nil {
+		logger.InfoContext(r.Context(), "calling service to add new deferred deep link entry")
+		resp, err := http.Post(*serverURL+"/deferDeepLink", "application/json", bytes.NewBuffer(reqB))
+		if err != nil {
 			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to make request: %v", err))
 			return
 		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to decode response body: %v", err))
+			return
+		}
+
+		logger.InfoContext(r.Context(), "got deep link API response", "body", string(body))
 
 		h.RenderJSON(w, http.StatusOK, nil)
 	})
 }
 
-func handleDeferQuery(h *renderer.Renderer) http.Handler {
+func handleNewDeferredDeepLink(h *renderer.Renderer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := logging.FromContext(r.Context())
-		logger.InfoContext(r.Context(), "handling defer request")
+		logger.InfoContext(r.Context(), "handling new deferred deep link request")
 		decoder := json.NewDecoder(r.Body)
-		var req DeferredAppLinkQueryRequest
+		var req DeferredDeepLinkQueryRequest
 		if err := decoder.Decode(&req); err != nil {
 			h.RenderJSON(w, http.StatusBadRequest, fmt.Errorf("failed to unmarshal request: %v", err))
 			return
 		}
-		if err := updateDatabaseForDeferredAppLinkQuery(db, &req); err != nil {
+		if err := updateDatabaseForDeferredDeepLinkQuery(r.Context(), db, &req); err != nil {
 			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to write to database: %v", err))
 			return
 		}
@@ -112,7 +125,7 @@ func handleDeferQuery(h *renderer.Renderer) http.Handler {
 	})
 }
 
-func handleProceedQuery(h *renderer.Renderer) http.Handler {
+func handleDeferredDeepLinkQuery(h *renderer.Renderer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h.RenderJSON(w, http.StatusOK, nil)
 	})
@@ -138,12 +151,7 @@ func realMain(ctx context.Context) error {
 	var cleanup func() error
 	db, cleanup = getDB()
 	defer cleanup()
-
-	// See https://github.com/go-sql-driver/mysql/issues/257#issuecomment-53886663.
-	// db.SetMaxIdleConns(0)
-	// db.SetMaxOpenConns(500)
-	// db.SetConnMaxLifetime(time.Minute)
-	logger.InfoContext(ctx, "starting database server connection")
+	logger.InfoContext(ctx, "connected to database server")
 
 	// Make a new renderer for rendering json.
 	// Don't provide filesystem as we don't have templates to render.
@@ -158,8 +166,8 @@ func realMain(ctx context.Context) error {
 	r := chi.NewRouter()
 	r.Get("/", handleIndex)
 	r.Mount("/app", handleAppQuery(h))
-	r.Mount("/defer", handleDeferQuery(h))
-	r.Mount("/proceed", handleProceedQuery(h))
+	r.Mount("/deferDeepLink", handleNewDeferredDeepLink(h))
+	r.Mount("/queryDeferredDeepLinks", handleDeferredDeepLinkQuery(h))
 	walkFunc := func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
 		logger.DebugContext(ctx, "Route registered", "http_method", method, "route", route)
 		return nil

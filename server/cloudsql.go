@@ -1,28 +1,17 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
-
-	// "cloud.google.com/go/cloudsqlconn"
 
 	"cloud.google.com/go/cloudsqlconn"
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
+	"github.com/abcxyz/pkg/logging"
 )
-
-const (
-	insertQuery = `
-`
-)
-
-type visit struct {
-	device_id string
-	pill      string
-}
 
 func getDB() (*sql.DB, func() error) {
 	cleanup, err := pgxv4.RegisterDriver("cloudsql-postgres", cloudsqlconn.WithIAMAuthN())
@@ -36,12 +25,13 @@ func getDB() (*sql.DB, func() error) {
 		log.Fatalf("Error on sql.Open: %v", err)
 	}
 
-	createVisits := `CREATE TEMPORARY TABLE IF NOT EXISTS deferredVisits (
-		device_ip VARCHAR(100), 
-		pill VARCHAR(100),
-		PRIMARY KEY (device_ip)
+	createDeferredDeepLinksTable := `CREATE TABLE IF NOT EXISTS deep_links (
+		user_ip VARCHAR(100), 
+		device_type VARCHAR(100),
+		target VARCHAR(100),
+		PRIMARY KEY (user_ip)
     );`
-	_, err = db.Exec(createVisits)
+	_, err = db.Exec(createDeferredDeepLinksTable)
 	if err != nil {
 		log.Fatalf("unable to create table: %s", err)
 	}
@@ -54,52 +44,17 @@ func getDB() (*sql.DB, func() error) {
 	return db, cleanup
 }
 
-// func connectWithConnector() (*sql.DB, error) {
-// 	mustGetenv := func(k string) string {
-// 		v := os.Getenv(k)
-// 		if v == "" {
-// 			log.Fatalf("Fatal Error in connect_connector.go: %s environment variable not set.", k)
-// 		}
-// 		return v
-// 	}
-
-// 	var (
-// 		dbUser                 = mustGetenv("DB_USER")                  // e.g. 'my-db-user'
-// 		dbPwd                  = mustGetenv("DB_PASS")                  // e.g. 'my-db-password'
-// 		dbName                 = mustGetenv("DB_NAME")                  // e.g. 'my-database'
-// 		instanceConnectionName = mustGetenv("INSTANCE_CONNECTION_NAME") // e.g. 'project:region:instance'
-// 	)
-
-// 	d, err := cloudsqlconn.NewDialer(context.Background())
-// 	if err != nil {
-// 		return nil, fmt.Errorf("cloudsqlconn.NewDialer: %w", err)
-// 	}
-// 	var opts []cloudsqlconn.DialOption
-// 	mysql.RegisterDialContext("cloudsqlconn",
-// 		func(ctx context.Context, addr string) (net.Conn, error) {
-// 			return d.Dial(ctx, instanceConnectionName, opts...)
-// 		})
-
-// 	dbURI := fmt.Sprintf("%s:%s@cloudsqlconn(localhost:3306)/%s?parseTime=true",
-// 		dbUser, dbPwd, dbName)
-
-// 	dbPool, err := sql.Open("mysql", dbURI)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("sql.Open: %w", err)
-// 	}
-// 	return dbPool, nil
-// }
-
-func updateDatabaseForDeferredAppLinkQuery(db *sql.DB, req *DeferredAppLinkQueryRequest) error {
-	queryStr := populateUpsertQueryForDeferredAppLinkQuery(req)
+func updateDatabaseForDeferredDeepLinkQuery(ctx context.Context, db *sql.DB, req *DeferredDeepLinkQueryRequest) error {
+	logger := logging.FromContext(ctx)
+	queryStr := populateUpsertQueryForDeferredDeepLinkQuery(req)
+	logger.InfoContext(ctx, "running db query", "queryStr", queryStr)
 	if _, err := db.Exec(queryStr); err != nil {
 		return fmt.Errorf("db.Exec failed: %v", err)
 	}
 	return nil
 }
 
-func populateUpsertQueryForDeferredAppLinkQuery(req *DeferredAppLinkQueryRequest) string {
-	values := []string{req.DeviceID, req.Pill}
-	query := `INSERT INTO deferredVisits VALUES (%s) ON DUPLICATE KEY UPDATE pill = %s;`
-	return fmt.Sprintf(query, strings.Join(values, ", "), req.Pill)
+func populateUpsertQueryForDeferredDeepLinkQuery(req *DeferredDeepLinkQueryRequest) string {
+	query := `INSERT INTO deep_links (user_ip, device_type, target) VALUES ('%s', '%s', '%s') ON CONFLICT (user_ip) DO UPDATE SET target = EXCLUDED.target, device_type = EXCLUDED.device_type;`
+	return fmt.Sprintf(query, req.UserIP, req.DeviceType, req.Target)
 }
