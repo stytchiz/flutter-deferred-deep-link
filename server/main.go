@@ -86,6 +86,7 @@ func handleAppQuery(h *renderer.Renderer) http.Handler {
 		}
 
 		target := chi.URLParam(r, "target")
+		// TODO: Remove device type hard coding
 		req := &DeferredDeepLinkQueryRequest{Target: target, UserIP: clientIP, DeviceType: "android"}
 		reqB, _ := json.Marshal(&req)
 		logger.InfoContext(r.Context(), "calling service to add new deferred deep link entry", "request", string(reqB))
@@ -128,7 +129,21 @@ func handleNewDeferredDeepLink(h *renderer.Renderer) http.Handler {
 
 func handleDeferredDeepLinkQuery(h *renderer.Renderer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		h.RenderJSON(w, http.StatusOK, nil)
+		logger := logging.FromContext(r.Context())
+		logger.InfoContext(r.Context(), "querying deferred deep linking")
+
+		clientIP, err := getClientIPFromHttpHeaders(r.Header)
+		if err != nil {
+			h.RenderJSON(w, http.StatusBadRequest, fmt.Errorf("failed to read client headers: %v", err))
+			return
+		}
+		// TODO: Also remove this DDL entry
+		target, err := queryDatabaseForDeferredDeepLink(r.Context(), db, clientIP)
+		if err != nil {
+			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to query the database: %v", err))
+			return
+		}
+		h.RenderJSON(w, http.StatusOK, map[string]string{"target": target})
 	})
 }
 

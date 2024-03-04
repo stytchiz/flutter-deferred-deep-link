@@ -58,3 +58,20 @@ func populateUpsertQueryForDeferredDeepLinkQuery(req *DeferredDeepLinkQueryReque
 	query := `INSERT INTO deep_links (user_ip, device_type, target) VALUES ('%s', '%s', '%s') ON CONFLICT (user_ip) DO UPDATE SET target = EXCLUDED.target, device_type = EXCLUDED.device_type;`
 	return fmt.Sprintf(query, req.UserIP, req.DeviceType, req.Target)
 }
+
+func queryDatabaseForDeferredDeepLink(ctx context.Context, db *sql.DB, ip string) (string, error) {
+	var target string
+	query := `SELECT target FROM deep_links WHERE user_ip = $1;`
+
+	err := db.QueryRowContext(ctx, query, ip).Scan(&target)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Println("No result for given IP")
+			return "", nil
+		}
+		return "", fmt.Errorf("QueryRowContext failed: %v", err)
+	}
+
+	log.Println("Running db query", "queryStr", query, "IP", ip)
+	return target, nil
+}
