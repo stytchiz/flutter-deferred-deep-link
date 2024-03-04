@@ -85,8 +85,7 @@ func handleAppQuery(h *renderer.Renderer) http.Handler {
 			return
 		}
 
-		target := chi.URLParam(r, "target")
-		// TODO: Remove device type hard coding
+		target := r.URL.Query().Get("target")
 		req := &DeferredDeepLinkQueryRequest{Target: target, UserIP: clientIP, DeviceType: "android"}
 		reqB, _ := json.Marshal(&req)
 		logger.InfoContext(r.Context(), "calling service to add new deferred deep link entry", "request", string(reqB))
@@ -181,7 +180,7 @@ func realMain(ctx context.Context) error {
 
 	r := chi.NewRouter()
 	r.Get("/", handleIndex)
-	r.Mount("/app/{target}", handleAppQuery(h))
+	r.Mount("/app", handleAppQuery(h))
 	r.Mount("/deferDeepLink", handleNewDeferredDeepLink(h))
 	r.Mount("/queryDeferredDeepLinks", handleDeferredDeepLinkQuery(h))
 	walkFunc := func(method, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
