@@ -37,10 +37,8 @@ import (
 )
 
 const (
-	ServiceAddr           = "https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app"
-	DeferServicePath      = "/defer"
-	defaultPort           = "8080"
-	deferredDeeplinkTable = "DeferredDeepLinks"
+	serverURL   = "https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app"
+	defaultPort = "8080"
 )
 
 var (
@@ -53,7 +51,7 @@ var (
 // empty
 type TemplateParams struct{}
 
-type DeferQueryRequest struct {
+type DeferredAppLinkQueryRequest struct {
 	DeviceID string `json:"device_id"`
 	Pill     string `json:"pill"`
 }
@@ -84,9 +82,9 @@ func handleAppQuery(h *renderer.Renderer) http.Handler {
 		}
 
 		pillID := chi.URLParam(r, "pill")
-		req := &DeferQueryRequest{Pill: pillID, DeviceID: clientIP}
+		req := &DeferredAppLinkQueryRequest{Pill: pillID, DeviceID: clientIP}
 		reqB, _ := json.Marshal(&req)
-		if _, err := http.Post(ServiceAddr+DeferServicePath, "application/json", bytes.NewBuffer(reqB)); err != nil {
+		if _, err := http.Post(serverURL+"/defer", "application/json", bytes.NewBuffer(reqB)); err != nil {
 			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to make request: %v", err))
 			return
 		}
@@ -100,12 +98,12 @@ func handleDeferQuery(h *renderer.Renderer) http.Handler {
 		logger := logging.FromContext(r.Context())
 		logger.InfoContext(r.Context(), "handling defer request")
 		decoder := json.NewDecoder(r.Body)
-		var req DeferQueryRequest
+		var req DeferredAppLinkQueryRequest
 		if err := decoder.Decode(&req); err != nil {
 			h.RenderJSON(w, http.StatusBadRequest, fmt.Errorf("failed to unmarshal request: %v", err))
 			return
 		}
-		if err := updateDatabaseForDeferredLinks(db, deferredDeeplinkTable, &req); err != nil {
+		if err := updateDatabaseForDeferredAppLinkQuery(db, &req); err != nil {
 			h.RenderJSON(w, http.StatusInternalServerError, fmt.Errorf("failed to write to database: %v", err))
 			return
 		}
@@ -137,17 +135,14 @@ func realMain(ctx context.Context) error {
 	logger := logging.FromContext(ctx)
 
 	// Connect to CloudSQL instance
-	var err error
-	db, err = connectWithConnector()
-	if err != nil {
-		return fmt.Errorf("could not connect to database: %v", err)
-	}
-	defer db.Close()
+	var cleanup func() error
+	db, cleanup = getDB()
+	defer cleanup()
 
 	// See https://github.com/go-sql-driver/mysql/issues/257#issuecomment-53886663.
-	db.SetMaxIdleConns(0)
-	db.SetMaxOpenConns(500)
-	db.SetConnMaxLifetime(time.Minute)
+	// db.SetMaxIdleConns(0)
+	// db.SetMaxOpenConns(500)
+	// db.SetConnMaxLifetime(time.Minute)
 	logger.InfoContext(ctx, "starting database server connection")
 
 	// Make a new renderer for rendering json.
