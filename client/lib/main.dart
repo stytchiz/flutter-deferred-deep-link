@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Deferred deep linking demo'),
     );
   }
 }
@@ -58,8 +58,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 Future<String> fetchUserData() async {
-  final response = await http.get(
-      Uri.parse('https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app/'));
+  final response = await http.get(Uri.parse(
+      'https://flutter-deferred-deep-link-23vgxprgkq-uc.a.run.app/queryDeferredDeepLinks'));
 
   if (response.statusCode == 200) {
     var data = json.decode(response.body);
@@ -73,33 +73,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _navigateBasedOnPageInfo();
-  }
-
-  Future<void> _navigateBasedOnPageInfo() async {
-    try {
-      final pageInfo = await fetchUserData();
-      if (pageInfo == 'page1') {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const FirstPage()),
-          );
-        });
-      } else if(pageInfo == 'page2') {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SecondPage()),
-          );
-        });
-      }
-
-      // Similarly, you can add more conditions for other pages
-    } catch (error) {
-      // Error handling
-      print('Failed to navigate based on page info: $error');
-    }
   }
 
   @override
@@ -120,111 +93,88 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'Home page',
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const FirstPage()),
-                );
-              },
-              child: const Text('Go to First Page'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SecondPage()),
-                );
-              },
-              child: const Text('Go to Second Page'),
-            ),
-            // Text(
-            //   '$_counter',
-            //   style: Theme.of(context).textTheme.headlineMedium,
-            // ),
-          ],
-        ),
-      ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: _incrementCounter,
-      //   tooltip: 'Increment',
-      //   child: const Icon(Icons.add),
-      // ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
-  }
-}
-
-class FirstPage extends StatelessWidget {
-  const FirstPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('First Page'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('This is the First Page'),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Go Back'),
-            ),
-          ],
-        ),
+      body: FutureBuilder<String>(
+        future: fetchUserData(), // the Future<String> function you defined
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const LoadingSkeleton(); // Show a loading indicator
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            var target = snapshot.data;
+            if (target == 'blue') {
+              return const BluePill();
+            } else if (target == 'red') {
+              return const RedPill();
+            } else {
+              return const NoPill();
+            }
+          }
+        },
       ),
     );
   }
 }
 
-class SecondPage extends StatelessWidget {
-  const SecondPage({Key? key}) : super(key: key);
+class LoadingSkeleton extends StatelessWidget {
+  const LoadingSkeleton({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Second Page'),
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text('Now quering which pill you select....'),
+        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('This is the Second Page'),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Go Back'),
-            ),
-          ],
-        ),
+    );
+  }
+}
+
+class BluePill extends StatelessWidget {
+  const BluePill({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text('By open the app, we direct you to blue pills!'),
+        ],
+      ),
+    );
+  }
+}
+
+class RedPill extends StatelessWidget {
+  const RedPill({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text('By open the app, we redirect you to red pill!'),
+        ],
+      ),
+    );
+  }
+}
+
+class NoPill extends StatelessWidget {
+  const NoPill({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text('No page has been selected, you stay with this homepage.'),
+        ],
       ),
     );
   }
