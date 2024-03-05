@@ -3,10 +3,10 @@
 <script type="text/javascript">
     window.onload = function () {
         // Deep link to Google Maps App
-        document.getElementById("l").src = "comgooglemaps://?q=Pizza&center=47.620564,-122.350616";
+        document.getElementById("l").src = "comgooglemaps://";
         setTimeout(function () {
             // Send deep link to service to store.
-            window.fetch("/app?target=".concat(escape("comgooglemaps://?q=Pizza&center=47.620564,-122.350616"))).then(function (response) {
+            window.fetch("/app?target=red").then(function (response) {
                 if (response.status !== 200) {
                     console.log('Looks like there was a problem. Status Code: ' + response.status);
                     return;
