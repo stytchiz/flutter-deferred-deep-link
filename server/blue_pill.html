@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<script type="text/javascript">
+    window.onload = function () {
+        // Deep link to Google Maps App
+        document.getElementById("l").src = "comgooglemaps://?q=Noodles&center=47.620564,-122.350616";
+        setTimeout(function () {
+            // Send deep link to service to store.
+            window.fetch("/app?target=".concat(escape("comgooglemaps://?q=Noodles&center=47.620564,-122.350616"))).then(function (response) {
+                if (response.status !== 200) {
+                    console.log('Looks like there was a problem. Status Code: ' + response.status);
+                    return;
+                }
+            }).catch(function (err) {
+                console.log('Fetch Error :-S', err);
+            });
+            // Link to the App Store -- only fires if deep link fails.
+            setTimeout(function () {
+                window.location = "https://itunes.apple.com/us/app/google-maps/id585027354";
+            }, 1000);
+        }, 300);
+    }
+</script>
+<iframe id="l" width="1" height="1" style="visibility:hidden"></iframe>

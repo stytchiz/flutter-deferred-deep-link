@@ -48,7 +48,7 @@ var (
 	serverURL = flag.String("service_url", defaultServerURL, "Specifies server address.")
 
 	db        *sql.DB
-	templates = template.Must(template.ParseFiles("index.html"))
+	templates = template.Must(template.ParseFiles("index.html", "red_pill.html", "blue_pill.html"))
 )
 
 // empty
@@ -150,6 +150,14 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	renderHTML(w, "index")
 }
 
+func handleRedPillQuery(w http.ResponseWriter, r *http.Request) {
+	renderHTML(w, "red_pill")
+}
+
+func handleBluePillQuery(w http.ResponseWriter, r *http.Request) {
+	renderHTML(w, "blue_pill")
+}
+
 func renderHTML(w http.ResponseWriter, name string) {
 	err := templates.ExecuteTemplate(w, name+".html", &TemplateParams{})
 	if err != nil {
@@ -180,6 +188,8 @@ func realMain(ctx context.Context) error {
 
 	r := chi.NewRouter()
 	r.Get("/", handleIndex)
+	r.Get("/red", handleRedPillQuery)
+	r.Get("/blue", handleBluePillQuery)
 	r.Mount("/app", handleAppQuery(h))
 	r.Mount("/deferDeepLink", handleNewDeferredDeepLink(h))
 	r.Mount("/queryDeferredDeepLinks", handleDeferredDeepLinkQuery(h))
