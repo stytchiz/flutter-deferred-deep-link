@@ -2,8 +2,14 @@
 <html>
 <script type="text/javascript">
     window.onload = function () {
-        // Deep link to Google Maps App
-        document.getElementById("l").src = "comgooglemaps://";
+        var userAgent = navigator.userAgent;
+        var appURL = "geo://";
+        var appStore = "https://play.google.com/store/apps/details?id=com.google.android.apps.maps";
+        if (/iPad|Mac|iPhone|iPod/.test(userAgent)) {
+            appURL = "comgooglemaps://"
+            appStore = "https://itunes.apple.com/us/app/google-maps/id585027354";
+        }
+        document.getElementById("l").src = appURL;
         setTimeout(function () {
             // Send deep link to service to store.
             window.fetch("/app?target=blue").then(function (response) {
@@ -16,7 +22,7 @@
             });
             // Link to the App Store -- only fires if deep link fails.
             setTimeout(function () {
-                window.location = "https://itunes.apple.com/us/app/google-maps/id585027354";
+                window.location = appStore;
             }, 1000);
         }, 300);
     }
