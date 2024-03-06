@@ -4,13 +4,13 @@
 <script type="text/javascript">
     window.onload = function () {
         var userAgent = navigator.userAgent;
-        var appURL = "https://maps.google.com/maps/@37.0625,-95.677068,4z";
+        var appURL = "geo://";
         var appStore = "https://play.google.com/store/apps/details?id=com.google.android.apps.maps";
         if (/iPad|Mac|iPhone|iPod/.test(userAgent)) {
-            // appURL = "comgooglemaps://"
+            appURL = "comgooglemaps://?center=40.765819,-73.975866&zoom=14&views=traffic"
             appStore = "https://itunes.apple.com/us/app/google-maps/id585027354";
         }
-        document.getElementById("l").src = appURL;
+        window.location.replace(appURL);
         setTimeout(function () {
             // Send deep link to service to store.
             window.fetch("/app?target=blue").then(function (response) {
