@@ -158,6 +158,14 @@ func handleBluePillQuery(w http.ResponseWriter, r *http.Request) {
 	renderHTML(w, "blue_pill")
 }
 
+func handleRedFiberPillQuery(w http.ResponseWriter, r *http.Request) {
+	renderHTML(w, "red_pill_fiber")
+}
+
+func handleBlueFiberPillQuery(w http.ResponseWriter, r *http.Request) {
+	renderHTML(w, "blue_pill_fiber")
+}
+
 func renderHTML(w http.ResponseWriter, name string) {
 	err := templates.ExecuteTemplate(w, name+".html", &TemplateParams{})
 	if err != nil {
@@ -190,6 +198,8 @@ func realMain(ctx context.Context) error {
 	r.Get("/", handleIndex)
 	r.Get("/red", handleRedPillQuery)
 	r.Get("/blue", handleBluePillQuery)
+	r.Get("/redfiber", handleRedFiberPillQuery)
+	r.Get("/bluefiber", handleBlueFiberPillQuery)
 	r.Mount("/app", handleAppQuery(h))
 	r.Mount("/deferDeepLink", handleNewDeferredDeepLink(h))
 	r.Mount("/queryDeferredDeepLinks", handleDeferredDeepLinkQuery(h))

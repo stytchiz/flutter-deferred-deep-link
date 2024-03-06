@@ -34,9 +34,13 @@
 
     <h2>Red pill or blue pill?</h2>
 
-    <button id="redButton" class="button button3">Red</button>
+    <button id="redButton" class="button button3">Red (Maps)</button>
 
-    <button id="blueButton" class="button button2">Blue</button>
+    <button id="blueButton" class="button button2">Blue (Maps)</button>
+
+    <button id="redButtonFiber" class="button button3">Red (Fiber)</button>
+
+    <button id="blueButtonFiber" class="button button2">Blue (Fiber)</button>
 
     <script type="text/javascript">
         document.getElementById("redButton").onclick = function () {
@@ -50,6 +54,18 @@
         };
     </script>
 
+
+    <script type="text/javascript">
+        document.getElementById("redButtonFiber").onclick = function () {
+            location.href = "/redfiber"
+        };
+    </script>
+
+    <script type="text/javascript">
+        document.getElementById("blueButtonFiber").onclick = function () {
+            location.href = "/bluefiber"
+        };
+    </script>
 </body>
 
 </html>
