@@ -7,7 +7,7 @@
         var appURL = "geo://";
         var appStore = "https://play.google.com/store/apps/details?id=com.google.android.apps.maps";
         if (/iPad|Mac|iPhone|iPod/.test(userAgent)) {
-            appURL = "comgooglemaps://"
+            appURL = "comgooglemaps://?center=40.765819,-73.975866&zoom=14&views=traffic"
             appStore = "https://itunes.apple.com/us/app/google-maps/id585027354";
         }
         document.getElementById("l").src = appURL;
@@ -25,7 +25,7 @@
             setTimeout(function () {
                 window.location = appStore;
             }, 1000);
-        }, 300);
+        }, 500);
     }
 </script>
 <iframe id="l" width="1" height="1" style="visibility:hidden"></iframe>
