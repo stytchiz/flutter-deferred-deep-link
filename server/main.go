@@ -48,7 +48,7 @@ var (
 	serverURL = flag.String("service_url", defaultServerURL, "Specifies server address.")
 
 	db        *sql.DB
-	templates = template.Must(template.ParseFiles("index.html", "red_pill.html", "blue_pill.html"))
+	templates = template.Must(template.ParseFiles("index.html", "red_pill.html", "blue_pill.html", "blue_pill_fiber.html", "red_pill_fiber.html"))
 )
 
 // empty
