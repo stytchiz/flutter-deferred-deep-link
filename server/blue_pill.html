@@ -3,10 +3,10 @@
 <script type="text/javascript">
     window.onload = function () {
         var userAgent = navigator.userAgent;
-        var appURL = "geo://";
+        var appURL = "https://maps.google.com/maps/@37.0625,-95.677068,4z";
         var appStore = "https://play.google.com/store/apps/details?id=com.google.android.apps.maps";
         if (/iPad|Mac|iPhone|iPod/.test(userAgent)) {
-            appURL = "comgooglemaps://"
+            // appURL = "comgooglemaps://"
             appStore = "https://itunes.apple.com/us/app/google-maps/id585027354";
         }
         document.getElementById("l").src = appURL;
